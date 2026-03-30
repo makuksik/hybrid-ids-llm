@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  sniffer:
+    build: .
+    container_name: net_sentinel_sniffer
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - .:/app
+    restart: always

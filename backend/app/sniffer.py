@@ -1,5 +1,6 @@
 from scapy.all import sniff, IP, TCP, UDP
 import time
+import requests
 
 stats = {
     "total_packets": 0,
@@ -31,7 +32,27 @@ def process_packet(packet):
         print(f"TCP: {stats['tcp_count']} | UDP: {stats['udp_count']}")
         print(f"-----------------------\n")
 
-print("AI-NetSentinel Sniffer uruchomiony...")
+        push_to_dashboard(
+            stats["total_packets"],
+            stats["tcp_count"],
+            stats["udp_count"],
+            len(stats["unique_ips"])
+        )
+
+def push_to_dashboard(total, tcp, udp, ips):
+    url = "http://host.docker.internal:3000/api/stats"
+    payload = {
+        "total_packets": total,
+        "tcp_count": tcp,
+        "udp_count": udp,
+        "unique_ips": ips
+    }
+    try:
+        requests.post(url, json=payload, timeout=1)
+    except Exception as e:
+        print(f"Błąd wysyłki do Dashboardu: {e}")
+
+print("NetSentinel Sniffer uruchomiony...")
 print("Nasłuchiwanie na interfejsach systemowych (Host Mode)...")
 
 sniff(prn=process_packet, store=0)

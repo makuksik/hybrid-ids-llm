@@ -1,0 +1,17 @@
+services:
+  sniffer:
+    build: ./backend
+    container_name: net_sentinel_sniffer
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./backend:/app
+    restart: always
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000

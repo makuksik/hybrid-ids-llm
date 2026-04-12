@@ -1,4 +1,17 @@
+"use client";
 import { ArrowUpRight, ArrowDownRight, Activity, AlertTriangle, Globe } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+const dataPPS = [
+  { time: '10:00', pps: 400 }, { time: '10:10', pps: 700 }, { time: '10:20', pps: 1200 },
+  { time: '10:30', pps: 900 }, { time: '10:40', pps: 1500 }, { time: '10:50', pps: 2100 }
+];
+
+const dataProto = [
+  { name: 'TCP', value: 75, color: '#3b82f6' },
+  { name: 'UDP', value: 20, color: '#a855f7' },
+  { name: 'Inne', value: 5, color: '#94a3b8' }
+];
 
 export default function Dashboard() {
   return (
@@ -13,18 +26,33 @@ export default function Dashboard() {
       </div>
 
       {/* Wizualizacja i Mapa */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96">
-        <div className="bg-white p-6 rounded-xl border shadow-sm col-span-2 flex flex-col">
-          <h3 className="text-lg font-semibold mb-4">Wizualizacja Statystyk (Ruch w czasie)</h3>
-          <div className="flex-1 bg-gray-50 rounded border border-dashed flex items-center justify-center text-gray-400">
-            [ Tu wyląduje wykres Recharts ]
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-xl border shadow-sm col-span-2 h-96 flex flex-col">
+          <h3 className="text-lg font-semibold mb-4">Natężenie ruchu (Packets Per Second)</h3>
+          <div className="flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dataPPS}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="time" hide />
+                <YAxis hide />
+                <Tooltip />
+                <Line type="monotone" dataKey="pps" stroke="#3b82f6" strokeWidth={3} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col">
-          <h3 className="text-lg font-semibold mb-4">Mapa Świata (GeoIP)</h3>
-          <div className="flex-1 bg-blue-50 rounded border border-dashed border-blue-200 flex items-center justify-center text-blue-400">
-            [ Integracja Mapy ]
+        <div className="bg-white p-6 rounded-xl border shadow-sm h-96 flex flex-col">
+          <h3 className="text-lg font-semibold mb-4">Podział Protokołów</h3>
+          <div className="flex-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={dataProto} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  {dataProto.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

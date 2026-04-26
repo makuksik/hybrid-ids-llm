@@ -2,15 +2,19 @@ services:
   sniffer:
     build: ./backend
     container_name: net_sentinel_sniffer
-    network_mode: host
+    # network_mode: host
+    ports:
+      - "8000:8000"       # <-- TO DODALIŚMY
     cap_add:
       - NET_ADMIN
       - NET_RAW
     volumes:
       - ./backend:/app
     restart: always
+
   frontend:
     build: ./frontend
+    container_name: net_sentinel_frontend
     ports:
       - "3000:3000"
     environment:

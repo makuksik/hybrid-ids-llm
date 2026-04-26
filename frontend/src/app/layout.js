@@ -9,7 +9,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pl">
-      <body className="flex h-screen bg-gray-50 text-gray-900">
+      <body className="flex h-screen bg-gray-50 text-gray-900" suppressHydrationWarning>
         {/* Sidebar */}
         <aside className="w-64 bg-slate-900 text-white flex flex-col">
           <div className="p-4 flex items-center gap-3 border-b border-slate-800">

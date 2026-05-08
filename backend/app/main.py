@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from .sniffer import start_sniffer
+from sniffer import start_sniffer
 
 event_queue = None
 loop = None

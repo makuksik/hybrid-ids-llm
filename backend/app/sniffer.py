@@ -1,5 +1,4 @@
-import time 
-import random
+import time # DODANE
 from scapy.all import sniff, IP, TCP, UDP
 
 stats = {
@@ -51,41 +50,4 @@ def process_packet(packet, callback):
         last_report_time = current_time
 
 def start_sniffer(callback):
-    print("Sniffer w trybie SYMULATORA")
-    
-    base_rate = 50 
-    
-    while True:
-        current_rate = int(base_rate + random.uniform(-20, 100))
-        sleep_time = 1.0 / max(1, current_rate)
-        
-        is_tcp = random.random() > 0.3 
-        proto = "TCP" if is_tcp else "UDP"
-        
-        public_octets = [8, 12, 17, 24, 45, 50, 72, 80, 104, 142, 185, 200, 212]
-        
-        src_ip = f"{random.choice(public_octets)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 254)}"
-        
-        dst_ip = "185.12.5.55"
-
-        port = random.randint(1024, 65535) if is_tcp else 53
-        
-        alert = {"type": "alert", "proto": proto, "src": src_ip, "dst": dst_ip, "port": port}
-        
-        class FakePacket:
-            def haslayer(self, layer):
-                if layer == IP: return True
-                if layer == TCP: return is_tcp
-                if layer == UDP: return not is_tcp
-                return False
-            def __getitem__(self, layer):
-                class FakeLayer: pass
-                fake = FakeLayer()
-                fake.src = src_ip
-                fake.dst = dst_ip
-                fake.dport = port
-                return fake
-                
-        process_packet(FakePacket(), callback)
-        
-        time.sleep(sleep_time)
+    sniff(prn=lambda pkt: process_packet(pkt, callback), store=0)

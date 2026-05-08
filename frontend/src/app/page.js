@@ -78,7 +78,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl border shadow-sm col-span-2 h-96 flex flex-col">
-          <h3 className="text-lg font-semibold mb-4">Natężenie ruchu (Packets Per Second)</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Natężenie ruchu (Packets Per Second)</h3>
           <div style={{ height: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={dataPPS}>
@@ -93,7 +93,7 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white p-6 rounded-xl border shadow-sm h-96 flex flex-col">
-          <h3 className="text-lg font-semibold mb-4">Podział Protokołów</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Podział Protokołów</h3>
           <div style={{ height: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -110,11 +110,11 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col h-96">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
             <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
             Live Traffic Feed
           </h3>
-          <div className="space-y-3 font-mono text-sm overflow-y-auto flex-1 pr-2">
+          <div className="space-y-3 font-mono text-sm overflow-y-auto flex-1 pr-2 text-slate-700">
             {liveFeed.length === 0 ? (
               <p className="text-gray-400 text-center mt-10">Oczekiwanie na pakiety...</p>
             ) : (
@@ -133,7 +133,7 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-purple-500 h-96 flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="text-purple-500" />
-            <h3 className="text-lg font-semibold">Ostatnia analiza LLM</h3>
+            <h3 className="text-lg font-semibold text-slate-800">Ostatnia analiza LLM</h3>
           </div>
           <div className="bg-purple-50 text-purple-900 p-4 rounded-lg text-sm leading-relaxed flex-1 overflow-auto">
             <strong>Analiza anomalii #4092:</strong> Wykryto nietypowy wzrost zapytań UDP na porcie 53 (DNS) z pojedynczego adresu IP. LLM klasyfikuje to zdarzenie jako potencjalną próbę <em>DNS Amplification DDoS</em> (Pewność: 87%). <br/><br/>
@@ -153,7 +153,7 @@ function StatCard({ title, value, trend, icon, isAlert = false }) {
     <div className={`bg-white p-6 rounded-xl border shadow-sm flex items-start justify-between ${isAlert ? 'border-red-200 bg-red-50/30' : ''}`}>
       <div>
         <p className="text-sm text-gray-500 mb-1">{title}</p>
-        <h4 className="text-2xl font-bold">{value}</h4>
+        <h4 className="text-2xl font-bold text-slate-800">{value}</h4>
         <span className={`text-sm ${trend === 'Live' ? 'text-blue-500 animate-pulse' : (trend.startsWith('+') ? 'text-green-500' : 'text-red-500')}`}>
           {trend}
         </span>

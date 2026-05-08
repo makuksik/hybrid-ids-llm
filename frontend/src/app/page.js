@@ -1,15 +1,14 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { ArrowUpRight, ArrowDownRight, Activity, AlertTriangle, Globe } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export default function Dashboard() {
 
   const [stats, setStats] = useState({ total: 0, tcp: 0, udp: 0, uniqueIps: 0 });
   const [liveFeed, setLiveFeed] = useState([]);
 
-  // Przykładowe dane dla wykresu liniowego (możesz to później też podpiąć pod backend)
-  const [dataPPS] = useState([
+  const [dataPPS, setDataPPS] = useState([
     { time: '10:00', pps: 400 }, { time: '10:10', pps: 700 }, { time: '10:20', pps: 1200 },
     { time: '10:30', pps: 900 }, { time: '10:40', pps: 1500 }, { time: '10:50', pps: 2100 }
   ]);
@@ -86,10 +85,11 @@ export default function Dashboard() {
           <div style={{ height: '300px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={dataProto} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                <Pie data={dataProto} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" isAnimationActive={false}>
                   {dataProto.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                 </Pie>
                 <Tooltip />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>

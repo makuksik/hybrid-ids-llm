@@ -4,58 +4,71 @@ import { ArrowUpRight, ArrowDownRight, Activity, AlertTriangle, Globe } from 'lu
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 export default function Dashboard() {
-
   const [stats, setStats] = useState({ total: 0, tcp: 0, udp: 0, uniqueIps: 0 });
   const [liveFeed, setLiveFeed] = useState([]);
-
-  const [dataPPS, setDataPPS] = useState([
-    { time: '10:00', pps: 400 }, { time: '10:10', pps: 700 }, { time: '10:20', pps: 1200 },
-    { time: '10:30', pps: 900 }, { time: '10:40', pps: 1500 }, { time: '10:50', pps: 2100 }
-  ]);
+  const [dataPPS, setDataPPS] = useState([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // Połączenie ze strumieniem SSE z backendu
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
     const eventSource = new EventSource('http://localhost:8000/alerts/stream');
 
     eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+      try {
+        const data = JSON.parse(event.data);
 
-      if (data.type === 'report') {
-        setStats({
-          total: data.total,
-          tcp: data.tcp,
-          udp: data.udp,
-          uniqueIps: data.unique_ips
-        });
-      } else if (data.type === 'alert') {
-        setLiveFeed((prevFeed) => {
-          const newFeed = [data, ...prevFeed];
-          return newFeed.slice(0, 15);
-        });
+        if (data.type === 'report') {
+          setStats({
+            total: data.total,
+            tcp: data.tcp,
+            udp: data.udp,
+            uniqueIps: data.unique_ips
+          });
+
+          setDataPPS((prev) => {
+            const newPoint = { 
+              time: new Date().toLocaleTimeString('pl-PL', { minute: '2-digit', second: '2-digit' }), 
+              pps: data.pps || data.total 
+            };
+            return [...prev, newPoint].slice(-15);
+          });
+        } else if (data.type === 'alert') {
+          setLiveFeed((prevFeed) => {
+            const newFeed = [data, ...prevFeed];
+            return newFeed.slice(0, 15);
+          });
+        }
+      } catch (err) {
+        console.error("Błąd parsowania:", err);
       }
     };
 
     eventSource.onerror = (error) => {
-      console.error("Błąd połączenia ze strumieniem:", error);
       eventSource.close();
     };
 
     return () => {
       eventSource.close();
     };
-  }, []);
+  }, [isMounted]);
 
-  // Dynamiczne dane dla wykresu kołowego
-  const dataProto = [
-    { name: 'TCP', value: stats.tcp, color: '#3b82f6' },
-    { name: 'UDP', value: stats.udp, color: '#a855f7' },
-    { name: 'Inne', value: Math.max(0, stats.total - stats.tcp - stats.udp), color: '#94a3b8' }
-  ];
+  if (!isMounted) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Ładowanie interfejsu...</div>;
+
+  const dataProto = stats.total === 0 
+    ? [{ name: 'Brak ruchu', value: 1, color: '#e2e8f0' }]
+    : [
+        { name: 'TCP', value: stats.tcp, color: '#3b82f6' },
+        { name: 'UDP', value: stats.udp, color: '#a855f7' },
+        { name: 'Inne', value: Math.max(0, stats.total - stats.tcp - stats.udp), color: '#94a3b8' }
+      ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-
-      {/* Statystyki zaktualizowane pod zmienne stanowe */}
+    <div className="max-w-7xl mx-auto space-y-6 p-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <StatCard title="Suma Pakietów" value={stats.total.toLocaleString()} trend="Live" icon={<Activity />} />
         <StatCard title="Ruch TCP" value={stats.tcp.toLocaleString()} trend="Live" icon={<ArrowUpRight className="text-green-500" />} />
@@ -63,18 +76,17 @@ export default function Dashboard() {
         <StatCard title="Unikalne IP" value={stats.uniqueIps.toLocaleString()} trend="Live" icon={<Globe />} isAlert={true} />
       </div>
 
-      {/* Wizualizacja i Mapa */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl border shadow-sm col-span-2 h-96 flex flex-col">
           <h3 className="text-lg font-semibold mb-4">Natężenie ruchu (Packets Per Second)</h3>
-          <div className="flex-1">
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ height: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height={300}>
               <LineChart data={dataPPS}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="time" hide />
+                <XAxis dataKey="time" tick={{fontSize: 12}} />
                 <YAxis hide />
                 <Tooltip />
-                <Line type="monotone" dataKey="pps" stroke="#3b82f6" strokeWidth={3} dot={false} />
+                <Line type="monotone" dataKey="pps" stroke="#3b82f6" strokeWidth={3} dot={false} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -83,7 +95,7 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded-xl border shadow-sm h-96 flex flex-col">
           <h3 className="text-lg font-semibold mb-4">Podział Protokołów</h3>
           <div style={{ height: '300px', width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={dataProto} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" isAnimationActive={false}>
                   {dataProto.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
@@ -96,7 +108,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Live Feed i AI Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-xl border shadow-sm flex flex-col h-96">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -119,7 +130,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Panel Alertu (statyczny dla przykładu, ale możesz go łatwo podpiąć pod logikę wyłapującą np. port 53) */}
         <div className="bg-white p-6 rounded-xl border shadow-sm border-l-4 border-l-purple-500 h-96 flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="text-purple-500" />

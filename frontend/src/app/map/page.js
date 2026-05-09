@@ -1,11 +1,10 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { Globe, ShieldAlert, Navigation, MapPin } from 'lucide-react';
 
 const geoUrl = "https://unpkg.com/world-atlas@2.0.2/countries-110m.json";
 
-// Słownik mapujący pierwsze oktety IP (ze sniffer.py) na prawdziwe współrzędne krajów (Ląd)
 const prefixToGeo = {
   "8": { coords: [-95.71, 37.09], country: "USA" },
   "12": { coords: [10.45, 51.16], country: "Niemcy" },
@@ -22,7 +21,6 @@ const prefixToGeo = {
   "212": { coords: [-106.34, 56.13], country: "Kanada" }
 };
 
-// Funkcja symulująca bazę GeoIP - teraz trzyma się lądu!
 const resolveGeoMock = (ip) => {
   const parts = ip.split('.');
   if (parts.length !== 4) return [0, 0];
@@ -31,13 +29,11 @@ const resolveGeoMock = (ip) => {
   const geoData = prefixToGeo[firstOctet];
 
   if (geoData) {
-    // Dodajemy delikatny rozrzut (-2 do 2 stopnie), żeby ataki z tego samego kraju wyglądały naturalnie
     const offsetX = (Math.random() - 0.5) * 4;
     const offsetY = (Math.random() - 0.5) * 4;
     return [geoData.coords[0] + offsetX, geoData.coords[1] + offsetY];
   }
 
-  // Domyślnie, jeśli IP nie pasuje, rzucamy w okolice Europy
   return [15.0 + (Math.random() * 5), 50.0 + (Math.random() * 5)];
 };
 
@@ -124,8 +120,7 @@ export default function GeoIpMap() {
 
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden relative">
 
-        {/* Lewy górny róg: Legenda */}
-        <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur p-3 rounded-lg border shadow-sm text-sm">
+        <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur p-3 rounded-lg border shadow-sm text-sm pointer-events-none">
           <p className="font-semibold flex items-center gap-2 mb-2">
             <Navigation size={16} className="text-blue-500" />
             Legenda
@@ -136,60 +131,60 @@ export default function GeoIpMap() {
           <div className="flex items-center gap-2 text-gray-600">
             <span className="w-3 h-3 bg-blue-500 rounded-full"></span> Ruch TCP
           </div>
+          <div className="mt-2 text-xs text-gray-400 border-t pt-2">
+            Scroll: Zoom | Drag: Przesuń
+          </div>
         </div>
 
-        {/* Prawy górny róg: Wskazanie kraju po najechaniu (Hover) */}
         {hoveredCountry && (
-          <div className="absolute top-4 right-4 z-10 bg-slate-900 text-white px-4 py-2 rounded-lg border border-slate-700 shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in duration-200">
+          <div className="absolute top-4 right-4 z-10 bg-slate-900 text-white px-4 py-2 rounded-lg border border-slate-700 shadow-lg text-sm font-medium flex items-center gap-2 animate-in fade-in duration-200 pointer-events-none">
             <MapPin size={16} className="text-blue-400" />
             {hoveredCountry}
           </div>
         )}
 
-        <div className="w-full h-[600px] bg-slate-50">
+        <div className="w-full h-[600px] bg-slate-50 cursor-grab active:cursor-grabbing">
           <ComposableMap projectionConfig={{ scale: 150 }} className="w-full h-full">
-            <Geographies geography={geoUrl}>
-              {({ geographies }) =>
-                geographies.map((geo) => (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    // Wykrywanie najechania myszką
-                    onMouseEnter={() => {
-                      setHoveredCountry(geo.properties.name);
-                    }}
-                    onMouseLeave={() => {
-                      setHoveredCountry("");
-                    }}
-                    fill="#e2e8f0"
-                    stroke="#cbd5e1"
-                    strokeWidth={0.5}
-                    style={{
-                      default: { outline: "none" },
-                      hover: { fill: "#94a3b8", outline: "none", cursor: "pointer", transition: "all 0.2s" },
-                      pressed: { outline: "none" },
-                    }}
-                  />
-                ))
-              }
-            </Geographies>
+            {/* 2. DODANO ZoomableGroup, obejmującą kontynenty i markery */}
+            <ZoomableGroup center={[0, 0]} zoom={1} minZoom={1} maxZoom={8}>
+              <Geographies geography={geoUrl}>
+                {({ geographies }) =>
+                  geographies.map((geo) => (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      onMouseEnter={() => setHoveredCountry(geo.properties.name)}
+                      onMouseLeave={() => setHoveredCountry("")}
+                      fill="#e2e8f0"
+                      stroke="#cbd5e1"
+                      strokeWidth={0.5 / 1} // Zapobiega grubnieniu linii przy zoomie
+                      style={{
+                        default: { outline: "none" },
+                        hover: { fill: "#94a3b8", outline: "none", transition: "all 0.2s" },
+                        pressed: { outline: "none" },
+                      }}
+                    />
+                  ))
+                }
+              </Geographies>
 
-            {markers.map((marker) => {
-              const isUDP = marker.proto === 'UDP';
-              return (
-                <Marker key={marker.id} coordinates={marker.coordinates}>
-                  <circle
-                    r={isUDP ? 6 : 4}
-                    fill={isUDP ? "#ef4444" : "#3b82f6"}
-                    className="animate-ping origin-center opacity-75"
-                  />
-                  <circle
-                    r={isUDP ? 4 : 2}
-                    fill={isUDP ? "#991b1b" : "#1e40af"}
-                  />
-                </Marker>
-              );
-            })}
+              {markers.map((marker) => {
+                const isUDP = marker.proto === 'UDP';
+                return (
+                  <Marker key={marker.id} coordinates={marker.coordinates}>
+                    <circle
+                      r={isUDP ? 6 : 4}
+                      fill={isUDP ? "#ef4444" : "#3b82f6"}
+                      className="animate-ping origin-center opacity-75"
+                    />
+                    <circle
+                      r={isUDP ? 4 : 2}
+                      fill={isUDP ? "#991b1b" : "#1e40af"}
+                    />
+                  </Marker>
+                );
+              })}
+            </ZoomableGroup>
           </ComposableMap>
         </div>
       </div>

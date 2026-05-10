@@ -1,14 +1,19 @@
 import asyncio
 import threading
 import json
+import subprocess
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from sniffer import start_sniffer
 
 event_queue = None
 loop = None
+
+class BlockRequest(BaseModel):
+    ip: str
 
 def sniffer_callback(data):
     if loop and event_queue:
@@ -32,6 +37,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+async def event_generator():
+    while True:
+        data = await event_queue.get()
+        yield f"data: {json.dumps(data)}\n\n"
+
+@app.post("/block-ip")
+async def block_ip(req: BlockRequest):
+    try:
+        cmd = f'netsh advfirewall firewall add rule name="NetSentinel_Block_{req.ip}" dir=in action=block remoteip={req.ip}'
+        subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+        return {"status": "success", "message": f"Zablokowano IP: {req.ip}"}
+    except subprocess.CalledProcessError as e:
+        return {"status": "error", "message": "Brak uprawnień administratora."}
 
 async def event_generator():
     while True:

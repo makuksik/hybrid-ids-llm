@@ -37,7 +37,6 @@ const resolveGeoMock = (ip) => {
 const enrichWithLlm = (rawAlert) => {
   const isDns = rawAlert.proto === 'UDP' && rawAlert.port === 53;
   const isTcpHigh = rawAlert.proto === 'TCP' && rawAlert.port < 1024;
-  // Gwarancja unikalnego klucza (naprawiony błąd z Reacta)
   const uniqueId = `${Date.now()}-${Math.random()}`;
 
   if (isDns) {
@@ -56,10 +55,10 @@ export default function AppBrain() {
   const [stats, setStats] = useState({ total: 0, tcp: 0, udp: 0, uniqueIps: 0 });
   const [liveFeed, setLiveFeed] = useState([]);
   const [dataPPS, setDataPPS] = useState([]);
-  
+
   const [markers, setMarkers] = useState([]);
   const [recentAlert, setRecentAlert] = useState(null);
-  
+
   const [llmAlerts, setLlmAlerts] = useState([]);
   const [llmStats, setLlmStats] = useState({ high: 0, medium: 0, low: 0 });
 
@@ -108,18 +107,43 @@ export default function AppBrain() {
     return () => eventSource.close();
   }, [isMounted]);
 
+  const handleBlockIp = async (ip) => {
+
+  console.log("TEST KLIKNIĘCIA! Próba zablokowania IP:", ip);
+
+    try {
+      const response = await fetch('http://localhost:8000/block-ip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ip: ip })
+      });
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        alert(result.message);
+      } else {
+        alert("Błąd: " + result.message);
+      }
+    } catch (error) {
+      console.error("Błąd podczas wysyłania żądania blokady:", error);
+      alert("Wystąpił błąd podczas próby zablokowania IP.");
+    }
+  };
+
   if (!isMounted) return <div className="min-h-screen bg-slate-50 flex items-center justify-center">Inicjalizacja Systemu NetSentinel...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* PASEK NAWIGACJI */}
       <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 font-bold text-xl">
             <ShieldAlert className="text-blue-500" />
             <span>NetSentinel <span className="text-blue-500">IDS</span></span>
           </div>
-          
+
           <nav className="flex gap-1 bg-slate-800 p-1 rounded-lg">
             <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={18} />} label="Statystyki" />
             <TabButton active={activeTab === 'map'} onClick={() => setActiveTab('map')} icon={<Globe size={18} />} label="Mapa Świata" />
@@ -131,7 +155,7 @@ export default function AppBrain() {
       <main className="flex-1 p-6">
         {activeTab === 'dashboard' && <DashboardView stats={stats} liveFeed={liveFeed} dataPPS={dataPPS} />}
         {activeTab === 'map' && <MapView markers={markers} recentAlert={recentAlert} />}
-        {activeTab === 'alerts' && <AlertsView alerts={llmAlerts} stats={llmStats} clearAlerts={() => setLlmAlerts([])} />}
+        {activeTab === 'alerts' && <AlertsView alerts={llmAlerts} stats={llmStats} clearAlerts={() => setLlmAlerts([])} onBlockIp={handleBlockIp} />}
       </main>
     </div>
   );
@@ -145,9 +169,8 @@ function TabButton({ active, onClick, icon, label }) {
   );
 }
 
-// WIDOK DASHBOARDU
 function DashboardView({ stats, liveFeed, dataPPS }) {
-  const dataProto = stats.total === 0 
+  const dataProto = stats.total === 0
     ? [{ name: 'Brak', value: 1, color: '#e2e8f0' }]
     : [
         { name: 'TCP', value: stats.tcp, color: '#3b82f6' },
@@ -194,7 +217,6 @@ function DashboardView({ stats, liveFeed, dataPPS }) {
   );
 }
 
-// WIDOK MAPY
 function MapView({ markers, recentAlert }) {
   const [hoveredCountry, setHoveredCountry] = useState("");
   return (
@@ -241,8 +263,7 @@ function MapView({ markers, recentAlert }) {
   );
 }
 
-// WIDOK ALERTÓW LLM
-function AlertsView({ alerts, stats, clearAlerts }) {
+function AlertsView({ alerts, stats, clearAlerts, onBlockIp }) {
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-300">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -270,7 +291,12 @@ function AlertsView({ alerts, stats, clearAlerts }) {
               </div>
               <div className="bg-slate-50 p-4 rounded-lg text-sm text-slate-700 border italic mb-4"><strong>Analiza LLM:</strong> {alert.analysis}</div>
               <div className="flex justify-end gap-3">
-                <button className={`px-4 py-2 text-sm font-bold text-white rounded-lg ${alert.severity === 'HIGH' ? 'bg-red-600' : 'bg-slate-800'}`}>{alert.action}</button>
+                <button
+                  onClick={() => onBlockIp(alert.src)}
+                  className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-colors ${alert.severity === 'HIGH' ? 'bg-red-600 hover:bg-red-700' : 'bg-slate-800 hover:bg-slate-700'}`}
+                >
+                  {alert.action}
+                </button>
               </div>
             </div>
           </div>

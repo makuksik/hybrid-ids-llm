@@ -1,4 +1,6 @@
-import time # DODANE
+import time
+import sqlite3
+from datetime import datetime
 from scapy.all import sniff, IP, TCP, UDP
 
 stats = {
@@ -9,13 +11,51 @@ stats = {
 }
 
 last_report_time = time.time()
-current_second_packets = 0 
+current_second_packets = 0
+
+
+def init_db():
+    conn = sqlite3.connect("net_sentinel.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            proto TEXT,
+            src_ip TEXT,
+            dst_ip TEXT,
+            port INTEGER
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+
+init_db()
+
+
+def save_alert(alert):
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    conn = sqlite3.connect("net_sentinel.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO alerts (timestamp, proto, src_ip, dst_ip, port) VALUES (?, ?, ?, ?, ?)",
+        (current_time, alert["proto"], alert["src"], alert["dst"], alert["port"])
+    )
+    conn.commit()
+    conn.close()
+
+    with open("alerts_log.txt", "a", encoding="utf-8") as f:
+        f.write(
+            f"[{current_time}] Zarejestrowano alert: Protokół={alert['proto']}, Źródło={alert['src']}, Cel={alert['dst']}, Port={alert['port']}\n")
+
 
 def process_packet(packet, callback):
     global stats, last_report_time, current_second_packets
-    
+
     stats["total_packets"] += 1
-    current_second_packets += 1 
+    current_second_packets += 1
 
     if packet.haslayer(IP):
         src_ip = packet[IP].src
@@ -32,6 +72,7 @@ def process_packet(packet, callback):
             alert = {"type": "alert", "proto": "UDP", "src": src_ip, "dst": dst_ip, "port": packet[UDP].dport}
 
         if alert and stats["total_packets"] % 50 == 0:
+            save_alert(alert)
             callback(alert)
 
     current_time = time.time()
@@ -39,15 +80,16 @@ def process_packet(packet, callback):
         report = {
             "type": "report",
             "total": stats["total_packets"],
-            "pps": current_second_packets, 
+            "pps": current_second_packets,
             "unique_ips": len(stats["unique_ips"]),
             "tcp": stats["tcp_count"],
             "udp": stats["udp_count"]
         }
         callback(report)
-        
+
         current_second_packets = 0
         last_report_time = current_time
+
 
 def start_sniffer(callback):
     sniff(prn=lambda pkt: process_packet(pkt, callback), store=0)

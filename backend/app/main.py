@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import sqlite3
 from sniffer import start_sniffer
 
 event_queue = None
@@ -60,3 +61,19 @@ async def event_generator():
 @app.get("/alerts/stream")
 async def stream_alerts():
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/alerts/count")
+async def get_alerts_count():
+    try:
+        conn = sqlite3.connect("net_sentinel.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM alerts")
+
+        total_count = cursor.fetchone()[0]
+
+        conn.close()
+        return {"status": "success", "total_saved_alerts": total_count}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

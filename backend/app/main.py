@@ -47,16 +47,15 @@ async def event_generator():
 @app.post("/block-ip")
 async def block_ip(req: BlockRequest):
     try:
-        cmd = f'netsh advfirewall firewall add rule name="NetSentinel_Block_{req.ip}" dir=in action=block remoteip={req.ip}'
-        subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True)
+        cmd = [
+            "netsh", "advfirewall", "firewall", "add", "rule",
+            f'name="NetSentinel_Block_{req.ip}"',
+            "dir=in", "action=block", f"remoteip={req.ip}"
+        ]
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
         return {"status": "success", "message": f"Zablokowano IP: {req.ip}"}
     except subprocess.CalledProcessError as e:
         return {"status": "error", "message": "Brak uprawnień administratora."}
-
-async def event_generator():
-    while True:
-        data = await event_queue.get()
-        yield f"data: {json.dumps(data)}\n\n"
 
 @app.get("/alerts/stream")
 async def stream_alerts():

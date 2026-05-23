@@ -35,16 +35,70 @@ const resolveGeoMock = (ip) => {
 };
 
 const enrichWithLlm = (rawAlert) => {
-  const isDns = rawAlert.proto === 'UDP' && rawAlert.port === 53;
-  const isTcpHigh = rawAlert.proto === 'TCP' && rawAlert.port < 1024;
   const uniqueId = `${Date.now()}-${Math.random()}`;
+  const { proto, port, src, dst } = rawAlert;
 
-  if (isDns) {
-    return { ...rawAlert, id: uniqueId, severity: 'HIGH', threat: 'Potencjalny DNS Amplification DDoS', confidence: 89, analysis: `Wykryto nienaturalny wolumen zapytań UDP na porcie 53 z adresu ${rawAlert.src}. Wzorzec odpowiada technice wzmocnienia DNS, zmierzającej do przeciążenia infrastruktury ofiary (${rawAlert.dst}).`, action: 'Zablokuj IP w Firewallu' };
-  } else if (isTcpHigh) {
-    return { ...rawAlert, id: uniqueId, severity: 'MEDIUM', threat: 'Skanowanie portów systemowych', confidence: 72, analysis: `Host ${rawAlert.src} próbuje nawiązać połączenia z portami niskiego numeru (well-known ports). Może to być próba mapowania usług systemowych (Reconnaissance).`, action: 'Obserwuj hosta' };
-  } else {
-    return { ...rawAlert, id: uniqueId, severity: 'LOW', threat: 'Nietypowy ruch TCP', confidence: 45, analysis: `Wykryto standardowy ruch na wysokim porcie (${rawAlert.port}). Poziom anomalii jest niski, ale host nie figurował wcześniej w bazie znanych urządzeń.`, action: 'Zignoruj' };
+  // Funkcja pomocnicza do losowania jednego tekstu z listy
+  const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  // 1. ZAGROŻENIE KRYTYCZNE (DNS / Amplification DDoS)
+  if (proto === 'UDP' && port === 53) {
+    const analyses = [
+      `Analiza heurystyczna wykryła nienaturalny wolumen zapytań UDP z ${src}. Wzorzec odpowiada technice wzmocnienia DNS (Amplification).`,
+      `Model behawioralny flaguje ten ruch jako potencjalny atak DDoS. Zidentyfikowano próbę wysycenia pasma infrastruktury ofiary (${dst}).`,
+      `Zarejestrowano krytyczną anomalię w protokole DNS. Stosunek zapytań do odpowiedzi wskazuje na złośliwą manipulację nagłówkami UDP przez hosta ${src}.`
+    ];
+    return {
+      ...rawAlert, id: uniqueId, severity: 'HIGH', threat: 'DNS Amplification DDoS',
+      confidence: Math.floor(Math.random() * 10) + 85, // Losowo 85% - 94%
+      analysis: pickRandom(analyses),
+      action: 'Zablokuj IP w Firewallu'
+    };
+  } 
+  
+  // 2. ZAGROŻENIE WYSOKIE (Próby włamania na konkretne usługi)
+  else if (proto === 'TCP' && (port === 22 || port === 3389)) {
+    const analyses = [
+      `Wykryto serię pakietów na porcie zdalnego zarządzania (${port}). Model sieci neuronowej podejrzewa próbę ataku słownikowego (Brute-Force).`,
+      `Host ${src} usiłuje nawiązać sesję administracyjną z serwerem docelowym. Brak autoryzacji w historii logów behawioralnych.`,
+      `Podejrzana interakcja z portem krytycznym. System klasyfikuje to jako aktywne poszukiwanie podatności usług logowania.`
+    ];
+    return {
+      ...rawAlert, id: uniqueId, severity: 'HIGH', threat: 'Próba nieautoryzowanego dostępu',
+      confidence: Math.floor(Math.random() * 15) + 75, // Losowo 75% - 89%
+      analysis: pickRandom(analyses),
+      action: 'Zablokuj IP w Firewallu'
+    };
+  } 
+  
+  // 3. ZAGROŻENIE ŚREDNIE (Skanowanie portów systemowych)
+  else if (proto === 'TCP' && port < 1024) {
+    const analyses = [
+      `Host ${src} sonduje uprzywilejowane porty systemowe. Zbieżność z profilem skanowania typu SYN Stealth.`,
+      `Nietypowa aktywność na porcie ${port}. Algorytm LLM sugeruje wczesną fazę rekonesansu przed właściwym atakiem.`,
+      `System zidentyfikował asymetryczny ruch TCP. Może to być zautomatyzowana próba mapowania usług docelowych.`
+    ];
+    return {
+      ...rawAlert, id: uniqueId, severity: 'MEDIUM', threat: 'Skanowanie portów / Rekonesans',
+      confidence: Math.floor(Math.random() * 15) + 60, // Losowo 60% - 74%
+      analysis: pickRandom(analyses),
+      action: 'Obserwuj hosta'
+    };
+  } 
+  
+  // 4. ZAGROŻENIE NISKIE (Zwykły ruch lub anomalia w tle)
+  else {
+    const analyses = [
+      `Wykryto ruch na porcie efemerycznym (${port}). Brak znanych sygnatur złośliwego kodu, zdarzenie traktowane informacyjnie.`,
+      `Standardowa wymiana pakietów w tle na wysokich portach. Prawdopodobnie sesja P2P lub telemetria aplikacji.`,
+      `Poziom anomalii jest niski, ale host ${src} wykazuje nietypową dystrybucję czasową pakietów. Wymagany dalszy monitoring.`
+    ];
+    return {
+      ...rawAlert, id: uniqueId, severity: 'LOW', threat: 'Anomalia o niskim priorytecie',
+      confidence: Math.floor(Math.random() * 20) + 30, // Losowo 30% - 49%
+      analysis: pickRandom(analyses),
+      action: 'Zignoruj'
+    };
   }
 };
 

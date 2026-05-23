@@ -8,6 +8,8 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./backend:/app
     restart: always
